@@ -1,0 +1,22 @@
+{
+  "name": "orders-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Small revenue reporting API used to test what an error-tracking tool can and cannot tell you about a non-crash bug.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --env-file=.env --require ./src/instrument.js src/server.js",
+    "start:bare": "node src/server.js",
+    "traffic": "node traffic/generate.js",
+    "reconcile": "node scripts/reconcile.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@sentry/node": "^10.73.0",
+    "express": "^4.19.2"
+  }
+}

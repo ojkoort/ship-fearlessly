@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orders-api · revenue console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0b0c;
+    --panel:     #101113;
+    --panel-2:   #16181b;
+    --line:      #24272c;
+    --line-soft: #1a1d21;
+    --text:      #d8d5ce;
+    --dim:       #71767d;
+    --dimmer:    #4a4e54;
+    --amber:     #ffb000;
+    --fast:      #4ec9b0;
+    --slow:      #ff6b5b;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --cond: "IBM Plex Sans Condensed", "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* faint scanline texture, keeps it from reading as flat AI-default dark */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px);
+    mix-blend-mode: screen;
+  }
+
+  .frame { display: grid; grid-template-rows: auto 1fr; height: 100%; }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex; align-items: baseline; gap: 18px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #131518, var(--panel));
+  }
+  .brand {
+    font-family: var(--cond); font-weight: 700; font-size: 15px;
+    letter-spacing: .10em; text-transform: uppercase; color: var(--amber);
+  }
+  .brand span { color: var(--dimmer); }
+  .env {
+    font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--dim); border: 1px solid var(--line);
+    padding: 2px 7px; border-radius: 2px;
+  }
+  .spacer { flex: 1; }
+  .uptime { font-size: 11px; color: var(--dimmer); letter-spacing: .05em; }
+  .dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--fast); margin-right: 6px; vertical-align: 1px;
+    box-shadow: 0 0 8px var(--fast);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+  /* ---------- body grid ---------- */
+  .body { display: grid; grid-template-columns: 232px 1fr; min-height: 0; }
+
+  aside {
+    border-right: 1px solid var(--line);
+    background: var(--panel);
+    padding: 16px 14px;
+    display: flex; flex-direction: column; gap: 22px;
+    overflow-y: auto;
+  }
+
+  .grp-label {
+    font-family: var(--cond); font-size: 10px; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: var(--dimmer); margin-bottom: 8px;
+  }
+
+  .seg { display: grid; gap: 3px; }
+  .seg button {
+    all: unset; cursor: pointer;
+    padding: 7px 10px; border: 1px solid var(--line-soft);
+    background: var(--panel-2); color: var(--dim);
+    font-family: var(--mono); font-size: 12px; letter-spacing: .06em;
+    display: flex; justify-content: space-between; align-items: center;
+    transition: border-color .12s, color .12s, background .12s;
+  }
+  .seg button:hover { color: var(--text); border-color: var(--line); }
+  .seg button[aria-pressed="true"] {
+    color: var(--bg); background: var(--amber); border-color: var(--amber);
+    font-weight: 600;
+  }
+  .seg button .hint { font-size: 10px; opacity: .6; }
+
+  .run {
+    all: unset; cursor: pointer; text-align: center;
+    padding: 10px; border: 1px solid var(--amber); color: var(--amber);
+    font-family: var(--cond); font-weight: 700; font-size: 12px;
+    letter-spacing: .14em; text-transform: uppercase;
+    transition: background .12s, color .12s;
+  }
+  .run:hover { background: var(--amber); color: var(--bg); }
+  .run:active { transform: translateY(1px); }
+
+  .drive {
+    all: unset; cursor: pointer; text-align: center;
+    padding: 8px; border: 1px dashed var(--line);
+    color: var(--dim); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; font-family: var(--cond); font-weight: 600;
+  }
+  .drive[aria-pressed="true"] { border-style: solid; border-color: var(--fast); color: var(--fast); }
+
+  /* ---------- main ---------- */
+  main { display: grid; grid-template-rows: auto auto 1fr auto; min-height: 0; min-width: 0; }
+
+  .latency-hero {
+    padding: 20px 22px 18px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: flex-end; gap: 28px;
+    background:
+      radial-gradient(900px 200px at 12% 130%, rgba(255,176,0,.07), transparent 70%),
+      var(--bg);
+  }
+  .hero-num {
+    font-size: 62px; line-height: .86; font-weight: 500;
+    letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+    transition: color .18s;
+  }
+  .hero-num small { font-size: 20px; color: var(--dimmer); margin-left: 4px; letter-spacing: 0; }
+  .hero-meta { padding-bottom: 6px; display: grid; gap: 5px; }
+  .hero-path { font-size: 12px; color: var(--dim); word-break: break-all; }
+  .hero-verdict {
+    font-family: var(--cond); font-weight: 700; font-size: 11px;
+    letter-spacing: .16em; text-transform: uppercase;
+  }
+
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    border-bottom: 1px solid var(--line);
+  }
+  .card { padding: 13px 18px; border-right: 1px solid var(--line-soft); }
+  .card:last-child { border-right: 0; }
+  .card .k {
+    font-family: var(--cond); font-size: 10px; font-weight: 600;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--dimmer);
+  }
+  .card .v {
+    font-size: 21px; margin-top: 5px; font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+  }
+  .card .v.sm { font-size: 15px; color: var(--dim); }
+  .card.audit { cursor: pointer; }
+  .card.audit:hover { background: var(--panel-2); }
+  .audit-sub {
+    font-size: 10.5px; color: var(--dimmer); margin-top: 3px; letter-spacing: .04em;
+  }
+  .audit-sub.bad { color: var(--slow); }
+
+  /* ---------- log ---------- */
+  .log-wrap { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  .log-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 9px 18px; border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .log-head h2 {
+    margin: 0; font-family: var(--cond); font-size: 11px; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--dim);
+  }
+  .pct { display: flex; gap: 16px; margin-left: auto; font-size: 11px; color: var(--dimmer); }
+  .pct b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .log { overflow-y: auto; min-height: 0; }
+  .row {
+    display: grid;
+    grid-template-columns: 62px 52px 1fr 78px;
+    align-items: center; gap: 12px;
+    padding: 5px 18px;
+    border-bottom: 1px solid var(--line-soft);
+    animation: slide .22s ease-out;
+  }
+  @keyframes slide { from { opacity: 0; transform: translateY(-5px) } to { opacity: 1; transform: none } }
+  .row:hover { background: var(--panel-2); }
+  .t { color: var(--dimmer); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .rg {
+    font-family: var(--cond); font-weight: 700; font-size: 11px;
+    letter-spacing: .12em; text-transform: uppercase;
+  }
+  .bar-track { height: 13px; background: var(--line-soft); position: relative; overflow: hidden; }
+  .bar { height: 100%; width: 0; transition: width .3s cubic-bezier(.2,.8,.3,1); }
+  .ms {
+    text-align: right; font-variant-numeric: tabular-nums; font-size: 12px;
+  }
+  .empty { padding: 40px 18px; color: var(--dimmer); font-size: 12px; }
+
+  .fast { color: var(--fast); }  .bg-fast { background: var(--fast); }
+  .slow { color: var(--slow); }  .bg-slow { background: var(--slow); }
+  .mid  { color: var(--amber); } .bg-mid  { background: var(--amber); }
+  .err  { color: var(--slow); }
+
+  .foot {
+    padding: 7px 18px; border-top: 1px solid var(--line);
+    font-size: 10.5px; color: var(--dimmer); letter-spacing: .04em;
+    background: var(--panel);
+  }
+
+  @media (max-width: 760px) {
+    .body { grid-template-columns: 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); }
+    .hero-num { font-size: 44px; }
+  }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <header>
+    <div class="brand">orders<span>-api</span></div>
+    <div class="env">production</div>
+    <div class="spacer"></div>
+    <div class="uptime"><span class="dot"></span><span id="uptime">connecting</span></div>
+  </header>
+
+  <div class="body">
+
+    <aside>
+      <div>
+        <div class="grp-label">Region</div>
+        <div class="seg" id="regions">
+          <button data-region="us"   aria-pressed="true">us   <span class="hint">americas</span></button>
+          <button data-region="eu"   aria-pressed="false">eu   <span class="hint">europe</span></button>
+          <button data-region="apac" aria-pressed="false">apac <span class="hint">asia pac</span></button>
+        </div>
+      </div>
+
+      <div>
+        <div class="grp-label">Window</div>
+        <div class="seg" id="windows">
+          <button data-days="7"  aria-pressed="true">7d</button>
+          <button data-days="14" aria-pressed="false">14d</button>
+          <button data-days="30" aria-pressed="false">30d</button>
+        </div>
+      </div>
+
+      <div style="display:grid;gap:8px">
+        <button class="run" id="run">Run report</button>
+        <button class="drive" id="drive" aria-pressed="false">Auto traffic: off</button>
+      </div>
+
+      <div>
+        <div class="grp-label">Per region p95</div>
+        <div id="regionStats" style="display:grid;gap:5px;font-size:11.5px;color:var(--dim)">
+          <div>no samples yet</div>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="latency-hero">
+        <div class="hero-num" id="heroMs">—<small>ms</small></div>
+        <div class="hero-meta">
+          <div class="hero-verdict" id="heroVerdict" style="color:var(--dimmer)">idle</div>
+          <div class="hero-path" id="heroPath">run a report to begin</div>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card"><div class="k">Revenue</div><div class="v" id="cRevenue">—</div></div>
+        <div class="card"><div class="k">Orders</div><div class="v" id="cOrders">—</div></div>
+        <div class="card"><div class="k">Unresolved customers</div><div class="v" id="cUnres">—</div></div>
+        <div class="card"><div class="k">By tier</div><div class="v sm" id="cTier">—</div></div>
+        <div class="card audit" id="auditCard">
+          <div class="k">Independent recalculation</div>
+          <div class="v" id="cAudit">—</div>
+          <div class="audit-sub" id="cAuditSub">click to verify</div>
+        </div>
+      </div>
+
+      <div class="log-wrap">
+        <div class="log-head">
+          <h2>Request log</h2>
+          <div class="pct">
+            <span>n <b id="sN">0</b></span>
+            <span>p50 <b id="sP50">—</b></span>
+            <span>p95 <b id="sP95">—</b></span>
+            <span>max <b id="sMax">—</b></span>
+          </div>
+        </div>
+        <div class="log" id="log">
+          <div class="empty">No requests yet. Hit “Run report”, or turn on auto traffic.</div>
+        </div>
+      </div>
+
+      <div class="foot" id="foot">orders-api · in-memory dataset · 42,000 orders · 12,000 customers</div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const state = { region: 'us', days: 7, rows: [], driving: null, max: 1 };
+  const MAX_ROWS = 60;
+
+  /* ---------- controls ---------- */
+  function bindSeg(containerId, key, cast) {
+    $(containerId).addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      for (const b of $(containerId).querySelectorAll('button')) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      }
+      state[key] = cast(btn.dataset[key === 'region' ? 'region' : 'days']);
+      runReport();
+    });
+  }
+  bindSeg('regions', 'region', String);
+  bindSeg('windows', 'days', Number);
+
+  $('run').addEventListener('click', runReport);
+
+  $('drive').addEventListener('click', () => {
+    if (state.driving) {
+      clearInterval(state.driving);
+      state.driving = null;
+      $('drive').setAttribute('aria-pressed', 'false');
+      $('drive').textContent = 'Auto traffic: off';
+    } else {
+      state.driving = setInterval(driveOne, 550);
+      $('drive').setAttribute('aria-pressed', 'true');
+      $('drive').textContent = 'Auto traffic: on';
+      driveOne();
+    }
+  });
+
+  /* Weighted the way the service is really used: EU reports are a minority. */
+  function driveOne() {
+    const roll = Math.random();
+    const region = roll < 0.55 ? 'us' : roll < 0.80 ? 'apac' : 'eu';
+    const days = [7, 14, 30][Math.floor(Math.random() * 3)];
+    request(region, days, false);
+  }
+
+  /* ---------- the request ---------- */
+  async function runReport() { return request(state.region, state.days, true); }
+
+  async function request(region, days, updateCards) {
+    const path = `/reports/revenue?region=${region}&days=${days}`;
+    const t0 = performance.now();
+    let status = 0, body = null;
+    try {
+      const res = await fetch(path);
+      status = res.status;
+      body = await res.json();
+    } catch (err) {
+      status = 0;
+    }
+    const ms = Math.round(performance.now() - t0);
+
+    push({ region, days, ms, status, path });
+    if (updateCards && body && status === 200) paintCards(body);
+    if (updateCards) paintHero(ms, path, status);
+  }
+
+  /* ---------- rendering ---------- */
+  function band(ms) {
+    if (ms < 50) return 'fast';
+    if (ms < 200) return 'mid';
+    return 'slow';
+  }
+  function verdictText(ms) {
+    if (ms < 50) return 'within baseline';
+    if (ms < 200) return 'elevated';
+    return 'far outside baseline';
+  }
+
+  function paintHero(ms, path, status) {
+    const cls = status !== 200 ? 'err' : band(ms);
+    const el = $('heroMs');
+    el.className = 'hero-num ' + cls;
+    el.innerHTML = `${ms}<small>ms</small>`;
+    const v = $('heroVerdict');
+    v.textContent = status !== 200 ? `http ${status || 'failed'}` : verdictText(ms);
+    v.className = 'hero-verdict ' + cls;
+    $('heroPath').textContent = path;
+  }
+
+  function paintCards(b) {
+    $('cRevenue').textContent = '$' + b.revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    $('cOrders').textContent = b.orders.toLocaleString('en-US');
+    $('cUnres').textContent = b.unresolvedCustomers;
+    $('cTier').textContent = Object.entries(b.byTier)
+      .map(([k, v]) => `${k} ${Math.round(v / 1000)}k`).join('  ·  ');
+    $('cAudit').textContent = '—';
+    $('cAudit').className = 'v';
+    $('cAuditSub').className = 'audit-sub';
+    $('cAuditSub').textContent = 'click to verify';
+  }
+
+  /* The audit endpoint recomputes revenue in integer cents. It is the only
+     thing here that knows the right answer, and nothing observing the running
+     service could produce it. */
+  async function runAudit() {
+    const el = $('cAudit'), sub = $('cAuditSub');
+    el.textContent = '...'; sub.textContent = 'recalculating'; sub.className = 'audit-sub';
+    try {
+      const a = await (await fetch(`/reports/audit?region=${state.region}&days=${state.days}`)).json();
+      const money = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (a.short > 0) {
+        el.textContent = money(a.expected);
+        el.className = 'v slow';
+        sub.className = 'audit-sub bad';
+        sub.textContent = `short by ${money(a.short)} across ${a.orders.toLocaleString()} orders`;
+      } else {
+        el.textContent = money(a.expected);
+        el.className = 'v fast';
+        sub.textContent = 'matches';
+      }
+    } catch {
+      el.textContent = '—'; sub.textContent = 'audit failed';
+    }
+  }
+  $('auditCard').addEventListener('click', runAudit);
+
+  function push(row) {
+    row.at = new Date();
+    state.rows.unshift(row);
+    if (state.rows.length > MAX_ROWS) state.rows.pop();
+    state.max = Math.max(...state.rows.map((r) => r.ms), 1);
+    renderLog();
+    renderStats();
+  }
+
+  function renderLog() {
+    const log = $('log');
+    if (!state.rows.length) return;
+    log.innerHTML = state.rows.map((r) => {
+      const cls = r.status !== 200 ? 'slow' : band(r.ms);
+      /* linear against the running max, so a 100x gap looks like a 100x gap */
+      const pct = Math.max((r.ms / state.max) * 100, 0.7);
+      const time = r.at.toTimeString().slice(0, 8);
+      return `<div class="row">
+        <div class="t">${time}</div>
+        <div class="rg ${cls}">${r.region}</div>
+        <div class="bar-track"><div class="bar bg-${cls}" style="width:${pct}%"></div></div>
+        <div class="ms ${cls}">${r.ms} ms</div>
+      </div>`;
+    }).join('');
+  }
+
+  /* nearest-rank percentile, the same definition an APM uses */
+  function pctl(arr, p) {
+    if (!arr.length) return null;
+    const s = [...arr].sort((a, b) => a - b);
+    return s[Math.min(s.length - 1, Math.ceil(p * s.length) - 1)];
+  }
+
+  function renderStats() {
+    const all = state.rows.map((r) => r.ms);
+    $('sN').textContent = all.length;
+    $('sP50').textContent = (pctl(all, 0.5) ?? '—') + (all.length ? ' ms' : '');
+    $('sP95').textContent = (pctl(all, 0.95) ?? '—') + (all.length ? ' ms' : '');
+    $('sMax').textContent = (all.length ? Math.max(...all) + ' ms' : '—');
+
+    const byRegion = {};
+    for (const r of state.rows) (byRegion[r.region] ||= []).push(r.ms);
+    const order = ['us', 'eu', 'apac'].filter((r) => byRegion[r]);
+    $('regionStats').innerHTML = order.length
+      ? order.map((r) => {
+          const p95 = pctl(byRegion[r], 0.95);
+          const cls = band(p95);
+          return `<div style="display:flex;justify-content:space-between">
+                    <span class="${cls}" style="font-weight:600">${r}</span>
+                    <span class="${cls}" style="font-variant-numeric:tabular-nums">${p95} ms
+                      <span style="color:var(--dimmer)">n=${byRegion[r].length}</span></span>
+                  </div>`;
+        }).join('')
+      : '<div>no samples yet</div>';
+  }
+
+  /* ---------- boot ---------- */
+  (async () => {
+    try {
+      const h = await (await fetch('/health')).json();
+      $('uptime').textContent = `${h.orders.toLocaleString()} orders · ${h.customers.toLocaleString()} customers`;
+    } catch { $('uptime').textContent = 'service unreachable'; }
+  })();
+
+  /* Start with traffic already flowing. Nothing to click, nothing to set up. */
+  runReport();
+  $('drive').click();
+})();
+</script>
+</body>
+</html>
