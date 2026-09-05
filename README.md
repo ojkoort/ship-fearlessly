@@ -29,11 +29,15 @@ spans. I wanted to see what a normal install actually tells you.
 
 Both bugs pass the test suite.
 
+![The dashboard under normal traffic](images/01-dashboard.png)
+
 ## Bug one
 
 I ran it. You can see the delay on the dashboard with your eyes.
 
 I opened my Sentry feed. Nothing. Crickets.
+
+![An empty Issues feed during the regression](images/02-sentry-issues-empty.png)
 
 So I went to Explore, then Traces. Every trace was there, and no problem showed up as an
 error, because nothing threw. There was a real delay and it never became an issue.
@@ -44,16 +48,17 @@ The numbers were clear enough. Median request around 25ms. The 95th percentile a
 Then I opened a slow trace.
 
 ```
-duration    481.761932
-self_time   481.762
+GET /reports/revenue        469.17 ms    self_time 1.002 ms
+  request_handler.express   467.27 ms
 ```
 
-Self time is the time spent in that span and not in any of its children. It is
-identical to the total. Sentry was telling me, in its own measurement, that all of the
-time was in one place and it could not break it down any further.
+![The whole trace: 467 of 469ms in one span](images/03-span-arithmetic.png)
 
-The child spans it did show were Express plumbing: `query` at 0.22ms, `expressInit` at
-0.09ms, `serveStatic` at 0.26ms.
+Self time is the work a span did itself, rather than time it spent waiting on its
+children. The root spent **one millisecond** of its own. Its child holds 467 of the 469.
+And that child has nothing beneath it at all.
+
+The only other spans in the trace were Express plumbing, all under half a millisecond.
 
 My handler calls `revenueReport`, which calls `enrichOrders`, which calls
 `resolveCustomer`, which calls `matchByBillingEmail`. Four levels of my own code. None
@@ -115,6 +120,8 @@ revenue you never knew you earned. Across my 42,000 orders it came to $556.37.
 I added a button to the dashboard that recomputes the revenue from scratch, in integer
 cents. It is the only thing in the entire system that knows the right answer, and the
 way it gets there is by not trusting the system.
+
+![The same screen, with the recalculation revealed](images/04-dashboard-audit.png)
 
 No error. No latency change. Eight tests passing. `18.39` and `18.40` take the same code
 path in the same nanoseconds. There is no signature to detect.
