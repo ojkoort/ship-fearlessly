@@ -145,8 +145,8 @@ Someone still has to know what the number was supposed to be.
 ## Run it yourself
 
 ```bash
-git clone https://github.com/ojkoort/orders-api-bug-hunt.git
-cd orders-api-bug-hunt
+git clone https://github.com/ojkoort/ship-fearlessly.git
+cd ship-fearlessly
 npm install
 cp .env.example .env      # add a Sentry DSN, or leave it empty to run without
 npm start
