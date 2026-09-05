@@ -7,8 +7,8 @@ months. Someone with a serious CV: time at Wix, a stretch as CTO of an AI startu
 today a senior engineer at a mental health company. He was not bragging. He said it the
 way you would mention you stopped taking the bus.
 
-I get it. JetBrains surveyed their users last month and found that 47% of developers'
-code is now written by agents.
+I get it. [JetBrains surveyed their users last month](https://blog.jetbrains.com/research/2026/08/how-much-code-do-developers-really-let-agents-write/) and found that 47% of
+developers' code is now written by agents.
 
 I am a marketer. I do not write production code. My job is taking technical products
 and marketing them to the people who do, which means I read a lot about how engineers
