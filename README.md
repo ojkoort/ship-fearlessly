@@ -123,6 +123,9 @@ way it gets there is by not trusting the system.
 
 ![The same screen, with the recalculation revealed](images/04-dashboard-audit.png)
 
+That view is one region over seven days: $12.16 short on 985 orders. The $556.37 is
+the same arithmetic over all 42,000.
+
 No error. No latency change. Eight tests passing. `18.39` and `18.40` take the same code
 path in the same nanoseconds. There is no signature to detect.
 

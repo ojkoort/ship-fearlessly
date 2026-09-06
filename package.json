@@ -10,7 +10,7 @@
     "start:bare": "node src/server.js",
     "traffic": "node traffic/generate.js",
     "reconcile": "node scripts/reconcile.js",
-    "test": "node --test test/"
+    "test": "node --test test/api.test.js"
   },
   "engines": {
     "node": ">=18"

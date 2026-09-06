@@ -56,7 +56,10 @@ function buildCustomers() {
 
 function buildOrders(customers) {
   const orders = new Array(ORDER_COUNT);
-  const now = Date.UTC(2026, 8, 4);
+  // Anchor the dataset to today's UTC midnight, not a fixed date, so the same
+  // orders fall inside every window on any day the repo is run.
+  const today = new Date();
+  const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
   const day = 86400000;
 
   for (let i = 0; i < ORDER_COUNT; i++) {
