@@ -30,31 +30,14 @@ function normaliseEmail(email) {
   return `${local.split('.').join('')}@${domain}`;
 }
 
-/**
- * Normalised billing email -> customer, built once on first use.
- *
- * Matching used to be a scan over every customer, re-normalising each address
- * on every lookup, which made a report cost orders x customers string
- * operations. Only EU orders reach this path, because only they were imported
- * without a customer id, so the cost showed up as EU-only tail latency. The
- * index makes each lookup a single hash probe. Earlier customers win a
- * collision, which is the record the old scan returned.
- */
-let byNormalisedEmail = null;
-
-function emailIndex() {
-  if (byNormalisedEmail === null) {
-    byNormalisedEmail = new Map();
-    for (const candidate of customers) {
-      const key = normaliseEmail(candidate.email);
-      if (!byNormalisedEmail.has(key)) byNormalisedEmail.set(key, candidate);
+function matchByBillingEmail(email) {
+  const wanted = normaliseEmail(email);
+  for (const candidate of customers) {
+    if (normaliseEmail(candidate.email) === wanted) {
+      return candidate;
     }
   }
-  return byNormalisedEmail;
-}
-
-function matchByBillingEmail(email) {
-  return emailIndex().get(normaliseEmail(email)) || null;
+  return null;
 }
 
 function enrichOrders(orders) {
