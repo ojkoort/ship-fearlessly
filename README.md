@@ -1,4 +1,4 @@
-# I planted two bugs in my own app. Sentry found one of them.
+# I planted two bugs in my own app. Sentry only found one of them.
 
 I had a free weekend.
 
